@@ -1,8 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, JSON, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship
+
+
+def utc_now() -> datetime:
+    """Return current UTC time - industry standard for database timestamps."""
+    return datetime.now(timezone.utc)
 
 
 Base = declarative_base()
@@ -16,7 +21,7 @@ class User(Base):
     email = Column(String(255), nullable=False)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(32), nullable=False, default="student")  # admin | tutor | student
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
 
 class Form(Base):
@@ -28,8 +33,8 @@ class Form(Base):
     owner_id = Column(Integer, nullable=True)
     course_id = Column(Integer, nullable=True)
     settings_json = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
     questions = relationship("Question", back_populates="form", cascade="all, delete-orphan")
 
@@ -43,8 +48,8 @@ class Question(Base):
     prompt = Column(Text, nullable=False)
     rubric_id = Column(Integer, nullable=True)
     metadata_json = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
     form = relationship("Form", back_populates="questions")
 
@@ -57,7 +62,7 @@ class Video(Base):
     storage_key = Column(String(512), nullable=False)
     duration = Column(Integer, nullable=True)
     lang = Column(String(8), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
 
 # --- Classrooms ---
@@ -68,7 +73,7 @@ class Classroom(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     enrollments = relationship("ClassroomEnrollment", back_populates="classroom", cascade="all, delete-orphan")
     assignments = relationship("ClassroomAssignment", back_populates="classroom", cascade="all, delete-orphan")
@@ -82,7 +87,7 @@ class ClassroomEnrollment(Base):
     classroom_id = Column(Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     role = Column(String(32), nullable=False, default="student")  # student only for now
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     classroom = relationship("Classroom", back_populates="enrollments")
 
@@ -94,7 +99,7 @@ class ClassroomAssignment(Base):
     id = Column(Integer, primary_key=True, index=True)
     classroom_id = Column(Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=False, index=True)
     form_id = Column(Integer, ForeignKey("forms.id", ondelete="CASCADE"), nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     classroom = relationship("Classroom", back_populates="assignments")
 
@@ -122,6 +127,6 @@ class Answer(Base):
     content = Column(Text, nullable=True)
     score = Column(Integer, nullable=True)
     feedback = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
 
     submission = relationship("Submission", back_populates="answers")
