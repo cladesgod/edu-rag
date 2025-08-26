@@ -3,6 +3,7 @@ from .celery_app import celery_app
 
 @celery_app.task(name="videos.index")
 def index_video(video_id: str) -> str:
+    # placeholder: simulate indexing
     return f"indexed {video_id}"
 
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
+import { getApiBase } from "@/lib/api"
 
 type Question = {
   id: number
@@ -11,7 +12,7 @@ type Question = {
   metadata_json?: Record<string, unknown>
 }
 
-const API = "http://localhost:8000"
+const API = getApiBase()
 
 export default function FormQuestionsPage() {
   const params = useParams<{ id: string }>()
@@ -24,6 +25,8 @@ export default function FormQuestionsPage() {
   const [answerIdx, setAnswerIdx] = useState<number>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editPrompt, setEditPrompt] = useState("")
 
   const getChoices = (meta: Record<string, unknown> | undefined): string[] | null => {
     const raw = (meta as { choices?: unknown } | undefined)?.choices
@@ -69,6 +72,43 @@ export default function FormQuestionsPage() {
       await load()
     } catch {
       setError("Failed to create question")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const beginEdit = (q: Question) => {
+    setEditingId(q.id)
+    setEditPrompt(q.prompt)
+  }
+
+  const saveEdit = async () => {
+    if (!editingId) return
+    try {
+      setLoading(true)
+      const res = await fetch(`${API}/questions/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: editPrompt }),
+      })
+      if (!res.ok) throw new Error("update failed")
+      setEditingId(null)
+      await load()
+    } catch {
+      setError("Failed to update question")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteQuestion = async (id: number) => {
+    try {
+      setLoading(true)
+      const res = await fetch(`${API}/questions/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("delete failed")
+      await load()
+    } catch {
+      setError("Failed to delete question")
     } finally {
       setLoading(false)
     }
@@ -128,11 +168,32 @@ export default function FormQuestionsPage() {
 
       <ul className="divide-y border rounded">
         {questions.map((q) => (
-          <li key={q.id} className="p-3">
-            <div className="text-sm text-gray-600">[{q.type}]</div>
-            <div className="font-medium">{q.prompt}</div>
-            {q.type === "mcq" && getChoices(q.metadata_json) && (
-              <div className="text-sm">Choices: {getChoices(q.metadata_json)!.join(", ")}</div>
+          <li key={q.id} className="p-3 space-y-2">
+            {editingId === q.id ? (
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600">[{q.type}]</div>
+                <textarea
+                  className="border rounded px-2 py-1 w-full min-h-[80px]"
+                  value={editPrompt}
+                  onChange={(e) => setEditPrompt(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <button className="bg-green-600 text-white px-3 py-1 rounded" disabled={loading} onClick={saveEdit}>Save</button>
+                  <button className="px-3 py-1 rounded border" onClick={() => setEditingId(null)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <div className="text-sm text-gray-600">[{q.type}]</div>
+                <div className="font-medium">{q.prompt}</div>
+                {q.type === "mcq" && getChoices(q.metadata_json) && (
+                  <div className="text-sm">Choices: {getChoices(q.metadata_json)!.join(", ")}</div>
+                )}
+                <div className="flex gap-3">
+                  <button className="text-sm underline" onClick={() => beginEdit(q)}>Edit</button>
+                  <button className="text-sm text-red-700 underline" onClick={() => deleteQuestion(q.id)}>Delete</button>
+                </div>
+              </div>
             )}
           </li>
         ))}

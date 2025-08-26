@@ -38,3 +38,14 @@ class Question(Base):
     form = relationship("Form", back_populates="questions")
 
 
+class Video(Base):
+    __tablename__ = "videos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, nullable=True)
+    storage_key = Column(String(512), nullable=False)
+    duration = Column(Integer, nullable=True)
+    lang = Column(String(8), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+

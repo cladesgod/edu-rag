@@ -1,44 +1,151 @@
 # edu-rag
-Monorepo for LLM-assisted education platform (Google Forms-like with realtime hints, grading, Video-RAG).
+Monorepo for an LLM-assisted education platform combining Google Forms–style assessment with realtime hints, rubric grading, and Video-RAG.
+
+Public demo URLs (adjust host/IP as needed):
+- Web UI: `http://<HOST_OR_IP>:3000`
+- API: `http://<HOST_OR_IP>:8000` (Swagger UI `http://<HOST_OR_IP>:8000/docs`)
+- MinIO (S3-compatible) console: `http://<HOST_OR_IP>:9001` (minioadmin/minioadmin)
+
+## What’s implemented in this MVP
+- FastAPI API with:
+  - Forms and Questions CRUD (Postgres/SQLAlchemy)
+  - Realtime hint demo via SSE `/realtime/hint` and WS `/realtime/ws/hint`
+  - Video upload to MinIO and indexing trigger (`POST /videos`, `POST /videos/{id}/index`, `GET /videos`)
+  - Health endpoints `/` and `/health`
+- Celery worker with placeholder tasks (`videos.index`, `grading.run`)
+- Next.js web app (TS + Tailwind) with pages:
+  - `/` SSE hint demo
+  - `/forms` Forms list/create + inline edit/delete
+  - `/forms/[id]` Questions list/create (MCQ) + inline edit/delete
+  - `/videos` Upload and Index trigger
+  - `/ws` WebSocket hint demo
+
+Planned next (high-level):
+- JWT auth with roles (tutor, student). Tutor dashboard and student exam flow with realtime guidance.
+- Grading pipeline job + feedback UI.
+- Video-RAG improvements (ASR, chunking, retrieval, timestamp suggestions).
+
+## Architecture (dev)
+Docker Compose stack:
+- API (FastAPI + Uvicorn)
+- Worker (Celery with Redis broker/result)
+- Postgres (pgvector)
+- Redis
+- MinIO (S3-compatible object storage)
+- Web (Next.js dev server)
 
 ## Dev quickstart
-
 Requirements: Docker + Docker Compose.
 
-1) Build and start services
-
+1) Start services
 ```
 docker compose -f infra/docker/compose.yml up -d --build
 ```
 
-Services:
-- API: http://localhost:8000
-- Postgres (pgvector) : localhost:5432 (user: postgres / pass: postgres / db: edurag)
-- Redis: localhost:6379
-- MinIO: http://localhost:9000 (console http://localhost:9001) user/pass: minioadmin
-
-2) Health check
-
+2) Verify health
 ```
 curl http://localhost:8000/health
 ```
 
-## Structure
+3) Open the web UI
+```
+http://localhost:3000
+```
 
+Notes:
+- First access to `/videos` requires MinIO to be up. If upload fails, ensure MinIO is running:
+  - `docker compose -f infra/docker/compose.yml up -d minio`
+  - check readiness: `curl -sS http://localhost:9000/minio/health/ready`
+- If Next.js dev shows transient chunk errors, restart web: `docker compose -f infra/docker/compose.yml restart web`.
+
+## Local development endpoints
+- Forms
+  - `POST /forms`
+  - `GET /forms`
+  - `GET /forms/{id}`
+  - `PATCH /forms/{id}`
+  - `DELETE /forms/{id}`
+- Questions
+  - `POST /questions`
+  - `GET /questions?form_id=...`
+  - `GET /questions/{id}`
+  - `PATCH /questions/{id}`
+  - `DELETE /questions/{id}`
+- Realtime
+  - `GET /realtime/hint` (SSE stream)
+  - `WS /realtime/ws/hint` (WebSocket stream)
+- Videos
+  - `POST /videos` (multipart form-data `file`)
+  - `POST /videos/{id}/index`
+  - `GET /videos`
+
+## Project structure
 ```
 repo/
   apps/
-    api/                # FastAPI app
-    workers/            # Celery workers
-    video-indexer/      # ASR + indexing (placeholder)
+    api/
+      app/
+        routers/        # auth, forms, questions, realtime, video
+        services/        # assessment, hint, retrieval, video_rag (stubs)
+        models/          # db engine + SQLAlchemy models
+        schemas/         # Pydantic schemas
+        main.py          # app factory + router wiring
+    workers/             # Celery tasks: grading, videos.index (stubs)
+    video-indexer/       # placeholder for ASR + indexing pipeline
+    web/                 # Next.js app (TS, Tailwind)
   infra/
-    docker/compose.yml  # Dev compose stack
+    docker/compose.yml   # Dev compose stack
 ```
 
-## Environment
+## Environment variables
+Defaults are dev-friendly; override via Docker Compose or environment.
 
-Defaults are baked for dev (see `apps/api/app/models/db.py`). You can set:
+API/Worker:
 - `DATABASE_URL` (default: `postgresql+psycopg://postgres:postgres@db:5432/edurag`)
 - `CELERY_BROKER_URL` (default: `redis://redis:6379/0`)
 - `CELERY_RESULT_BACKEND` (default: `redis://redis:6379/1`)
+- `MINIO_ENDPOINT` (default: `minio:9000` inside compose)
+- `MINIO_ACCESS_KEY` (default: `minioadmin`)
+- `MINIO_SECRET_KEY` (default: `minioadmin`)
+- `MINIO_SECURE` (default: `false`)
+- `MINIO_BUCKET` (default: `videos`)
+
+Web:
+- `NEXT_PUBLIC_API_URL` (optional). If unset, the web app auto-derives `http(s)://<host>:8000`.
+
+## Common commands
+Build and start all:
+```
+docker compose -f infra/docker/compose.yml up -d --build
+```
+
+Tail logs (API/worker/web):
+```
+docker compose -f infra/docker/compose.yml logs -f api
+docker compose -f infra/docker/compose.yml logs -f worker
+docker compose -f infra/docker/compose.yml logs -f web
+```
+
+Restart a service:
+```
+docker compose -f infra/docker/compose.yml restart api
+```
+
+MinIO readiness:
+```
+curl -sS http://localhost:9000/minio/health/ready
+```
+
+## Tutor/Student next steps
+This repository is prepared for role-based flows. Immediate work items:
+- Add JWT auth (register/login) with role claims: tutor, student
+- Guard API routes; add tutor-only endpoints (content mgmt, grading triggers)
+- Web: login page, token storage (httpOnly cookie or in-memory), route guards
+- Tutor dashboard: manage forms/questions/videos; view submissions
+- Student exam page: join exam, answer with realtime hints; submit for grading
+
+## Notes for future implementers
+- Realtime streaming demos are in place (SSE/WS) and ready to be swapped with model-backed hint engines.
+- Celery tasks are stubs; integrate ASR and retrieval pipelines as needed.
+- Vector DB is pgvector for simplicity; can be replaced with Weaviate/Milvus.
 

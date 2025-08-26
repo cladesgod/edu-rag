@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { getApiBase } from '@/lib/api'
 
 export default function Home() {
   const [health, setHealth] = useState<string>('checking...')
@@ -9,7 +10,7 @@ export default function Home() {
   const evtSourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
-    fetch('http://localhost:8000/health')
+    fetch(`${getApiBase()}/health`)
       .then((r) => r.json())
       .then((j) => setHealth(JSON.stringify(j)))
       .catch(() => setHealth('error'))
@@ -24,7 +25,7 @@ export default function Home() {
   const startStream = () => {
     if (evtSourceRef.current) evtSourceRef.current.close()
     const qs = new URLSearchParams({ text: input }).toString()
-    const es = new EventSource(`http://localhost:8000/realtime/hint?${qs}`)
+    const es = new EventSource(`${getApiBase()}/realtime/hint?${qs}`)
     es.addEventListener('hint', (e) => setSse((prev) => [...prev, (e as MessageEvent).data]))
     es.addEventListener('context', (e) => setSse((prev) => [...prev, (e as MessageEvent).data]))
     es.onerror = () => es.close()
