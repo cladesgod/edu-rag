@@ -39,3 +39,26 @@ def update_role(user_id: int, payload: UpdateRoleIn, db: Session = Depends(get_d
     return u
 
 
+@router.patch("/users/{user_id}/password")
+def reset_password(user_id: int, payload: dict, db: Session = Depends(get_db)) -> dict:
+    new_password = payload.get("password")
+    if not new_password or len(str(new_password)) < 6:
+        raise HTTPException(status_code=400, detail="password must be at least 6 characters")
+    u = db.get(User, user_id)
+    if not u:
+        raise HTTPException(status_code=404, detail="user not found")
+    u.password_hash = hash_password(str(new_password))
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user_id: int, db: Session = Depends(get_db)) -> None:
+    u = db.get(User, user_id)
+    if not u:
+        raise HTTPException(status_code=404, detail="user not found")
+    db.delete(u)
+    db.commit()
+    return None
+
+

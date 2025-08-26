@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useParams } from "next/navigation"
 import { getApiBase } from "@/lib/api"
+import { getRole, getToken } from "@/lib/auth"
 
 type Question = {
   id: number
@@ -33,10 +34,17 @@ export default function FormQuestionsPage() {
     return Array.isArray(raw) ? (raw as string[]) : null
   }
 
+  const buildHeaders = (base?: Record<string, string>): Record<string, string> => {
+    const headers: Record<string, string> = { ...(base || {}) }
+    const t = getToken()
+    if (t) headers["Authorization"] = `Bearer ${t}`
+    return headers
+  }
+
   const load = async () => {
     try {
       setError(null)
-      const res = await fetch(`${API}/questions?form_id=${formId}`)
+      const res = await fetch(`${API}/questions?form_id=${formId}`, { headers: buildHeaders() })
       const data = await res.json()
       setQuestions(data)
     } catch {
@@ -45,6 +53,13 @@ export default function FormQuestionsPage() {
   }
 
   useEffect(() => {
+    // guard
+    const role = getRole()
+    const token = getToken()
+    if (!token || !(role === "tutor" || role === "admin")) {
+      window.location.href = "/login"
+      return
+    }
     if (!Number.isFinite(formId)) return
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,14 +79,22 @@ export default function FormQuestionsPage() {
       }
       const res = await fetch(`${API}/questions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: buildHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ form_id: formId, type, prompt, metadata_json: metadata }),
       })
-      if (!res.ok) throw new Error("create failed")
+      if (!res.ok) {
+        let msg = "Failed to create question"
+        try {
+          const j = await res.json() as any
+          if (typeof j?.detail === "string") msg = j.detail
+          else if (Array.isArray(j?.detail)) msg = j.detail.map((d: any) => d?.msg || JSON.stringify(d)).join("; ")
+        } catch {}
+        throw new Error(msg)
+      }
       setPrompt("")
       await load()
-    } catch {
-      setError("Failed to create question")
+    } catch (e: any) {
+      setError(e?.message || "Failed to create question")
     } finally {
       setLoading(false)
     }
@@ -88,7 +111,7 @@ export default function FormQuestionsPage() {
       setLoading(true)
       const res = await fetch(`${API}/questions/${editingId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: buildHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ prompt: editPrompt }),
       })
       if (!res.ok) throw new Error("update failed")
@@ -104,7 +127,7 @@ export default function FormQuestionsPage() {
   const deleteQuestion = async (id: number) => {
     try {
       setLoading(true)
-      const res = await fetch(`${API}/questions/${id}`, { method: "DELETE" })
+      const res = await fetch(`${API}/questions/${id}`, { method: "DELETE", headers: buildHeaders() })
       if (!res.ok) throw new Error("delete failed")
       await load()
     } catch {

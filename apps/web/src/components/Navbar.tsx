@@ -2,13 +2,15 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { getRole, clearToken } from "@/lib/auth"
+import { getRole, clearToken, getEmail } from "@/lib/auth"
 
 export default function Navbar() {
   const [role, setRole] = useState<string | null>(null)
+  const [email, setEmail] = useState<string | null>(null)
 
   useEffect(() => {
     setRole(getRole())
+    setEmail(getEmail())
   }, [])
 
   const logout = () => {
@@ -26,6 +28,9 @@ export default function Navbar() {
               <Link href="/login" className="ml-2 rounded-md bg-black px-3 py-1.5 text-white">Login</Link>
               <Link href="/register" className="rounded-md border px-3 py-1.5">Register</Link>
             </>
+          )}
+          {role && (
+            <span className="text-gray-600 hidden sm:inline">{email || ""} ({role})</span>
           )}
           {role === "student" && (
             <>

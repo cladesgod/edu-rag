@@ -13,7 +13,7 @@ export function clearToken() {
   localStorage.removeItem('auth_token')
 }
 
-type JwtPayload = { sub?: string; role?: string; exp?: number; [k: string]: unknown }
+type JwtPayload = { sub?: string; role?: string; email?: string; exp?: number; [k: string]: unknown }
 
 export function parseJwt(token: string): JwtPayload | null {
   try {
@@ -35,6 +35,13 @@ export function getRole(): string | null {
   if (!t) return null
   const p = parseJwt(t)
   return p?.role ?? null
+}
+
+export function getEmail(): string | null {
+  const t = getToken()
+  if (!t) return null
+  const p = parseJwt(t)
+  return (p?.email as string) || null
 }
 
 
