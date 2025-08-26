@@ -29,6 +29,9 @@ export default function Home() {
             <Link href="/login" className="rounded-md bg-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">
               Login
             </Link>
+            <Link href="/register" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
+              Register
+            </Link>
             <Link href="/forms" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
               Forms
             </Link>
