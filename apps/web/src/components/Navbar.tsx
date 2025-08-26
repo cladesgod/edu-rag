@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { getRole, removeToken } from "@/lib/auth"
+import { getRole, clearToken } from "@/lib/auth"
 
 export default function Navbar() {
   const [role, setRole] = useState<string | null>(null)
@@ -12,7 +12,7 @@ export default function Navbar() {
   }, [])
 
   const logout = () => {
-    removeToken()
+    clearToken()
     window.location.href = "/"
   }
 
@@ -29,7 +29,7 @@ export default function Navbar() {
           )}
           {role === "student" && (
             <>
-              <Link href="/student" className="hover:underline">My Exams</Link>
+              <Link href="/student/exams" className="hover:underline">My Exams</Link>
               <button onClick={logout} className="rounded-md border px-3 py-1.5">Logout</button>
             </>
           )}
