@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth, forms, questions, realtime
+from .models.db import engine
+from .models.entities import Base
 
 
 def create_app() -> FastAPI:
@@ -31,5 +33,8 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+# Create tables at startup (dev convenience)
+Base.metadata.create_all(bind=engine)
 
 
