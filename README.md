@@ -14,14 +14,10 @@ Public demo URLs (adjust host/IP as needed):
   - Health endpoints `/` and `/health`
 - Celery worker with placeholder tasks (`videos.index`, `grading.run`)
 - Next.js web app (TS + Tailwind) with pages:
-  - `/` Landing page with CTAs (Login, Tutor Dashboard, Admin Panel, Student Demo) and API health
-  - `/forms` Forms list/create + inline edit/delete (tutor/admin)
-  - `/classrooms` Classroom management (create, enroll students, assign forms) (tutor/admin)
-  - `/forms/[id]` Questions list/create (MCQ) + inline edit/delete
-  - `/videos` Upload and Index trigger
-  - `/ws` WebSocket hint demo
-  - `/login` Email/password login; stores JWT in localStorage
-  - `/admin` Admin panel (users list) — requires admin role
+  - Public: `/` (focused hero), `/login`, `/register`
+  - Student: `/student/exams`, `/student/exams/[id]` (save, submit, SSE hints)
+  - Tutor: `/tutor` (dashboard), `/tutor/monitor` (active submissions), `/forms`, `/forms/[id]`, `/classrooms`, `/videos`
+  - Admin: `/admin` (list users, create tutor, reset password, delete user)
 
 Planned next (high-level):
 - JWT auth with roles (tutor, student). Tutor dashboard and student exam flow with realtime guidance.
@@ -98,6 +94,21 @@ Notes:
   - `POST /classrooms/{id}/enroll` — enroll a student `{ user_id }`
   - `POST /classrooms/{id}/assign` — assign a form `{ form_id }`
 
+- Submissions
+  - `POST /submissions/start` — start a submission for current user `{ form_id }`
+  - `POST /submissions/answer` — upsert an answer `{ submission_id, question_id, content }`
+  - `POST /submissions/submit` — finalize a submission `{ submission_id }`
+  - `GET /submissions/mine` — list current user submissions
+  - `GET /submissions/{id}` — get submission detail (with answers)
+  - `GET /submissions/monitor` — list active (unsubmitted) submissions (tutor/admin)
+
+- Admin
+  - `GET /admin/users`
+  - `POST /admin/users` — create user (admin/tutor)
+  - `PATCH /admin/users/{id}/role` — change role
+  - `PATCH /admin/users/{id}/password` — reset password (min length 6)
+  - `DELETE /admin/users/{id}` — delete user
+
 ## Project structure
 ```
 repo/
@@ -136,6 +147,9 @@ Auth (API):
 - `JWT_SECRET` (default: devsecret_change_me)
 - `JWT_EXPIRE_MINUTES` (default: 60)
 
+Admin seed (dev):
+- Use `/login` with `timtim@example.com` / `7410258!` (pre-seeded).
+
 ## Common commands
 Build and start all:
 ```
@@ -163,7 +177,7 @@ curl -sS http://localhost:9000/minio/health/ready
 This repository is prepared for role-based flows. Immediate work items:
 - Add JWT auth (register/login) with role claims: tutor, student (API is in place)
 - Guard API routes; add tutor-only endpoints (content mgmt, grading triggers) (in place for forms/questions/videos)
-- Web: route guards by role on tutor/admin pages (in progress)
+- Web: route guards by role on tutor/admin pages (added for key pages)
 - Tutor dashboard: manage forms/questions/videos; view submissions
 - Student exam page: join exam, answer with realtime hints; submit for grading
 
@@ -171,4 +185,14 @@ This repository is prepared for role-based flows. Immediate work items:
 - Realtime streaming demos are in place (SSE/WS) and ready to be swapped with model-backed hint engines.
 - Celery tasks are stubs; integrate ASR and retrieval pipelines as needed.
 - Vector DB is pgvector for simplicity; can be replaced with Weaviate/Milvus.
+
+### Frontend code style
+- Components in `apps/web/src/components`. Pages in `apps/web/src/app/*` use App Router.
+- Use `getApiBase()` for API URL and `getToken()/getRole()` for auth.
+- Always include `Authorization: Bearer <token>` for tutor/admin calls.
+
+### Known gaps
+- Questions page doesn’t yet load actual questions structure; improves in later sprint.
+- No email delivery. Password reset is admin-only.
+- Bcrypt backend logs a harmless warning in dev (passlib backend version read).
 
