@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..deps import get_db, get_current_user, get_current_tutor_user
-from ..models.entities import Submission, Answer, Form, Question
+from ..models.entities import Submission, Answer, Form, Question, utc_now
 from ..schemas.submissions import StartSubmissionIn, SubmissionOut, UpsertAnswerIn, SubmitIn, SubmissionDetailOut, AnswerOut
+from ..config import config
 
 
 router = APIRouter(prefix="/submissions", tags=["submissions"])
@@ -43,7 +44,7 @@ def submit(payload: SubmitIn, db: Session = Depends(get_db), user=Depends(get_cu
     sub = db.query(Submission).filter(Submission.id == payload.submission_id, Submission.user_id == int(user.get("sub"))).first()
     if not sub:
         raise HTTPException(status_code=404, detail="submission not found")
-    sub.submitted_at = __import__("datetime").datetime.utcnow()
+    sub.submitted_at = utc_now()
     db.commit()
     return {"ok": True}
 

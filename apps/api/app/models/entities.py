@@ -112,7 +112,7 @@ class Submission(Base):
     id = Column(Integer, primary_key=True, index=True)
     form_id = Column(Integer, ForeignKey("forms.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    started_at = Column(DateTime, default=utc_now, nullable=False)
     submitted_at = Column(DateTime, nullable=True)
 
     answers = relationship("Answer", back_populates="submission", cascade="all, delete-orphan")

@@ -1,12 +1,15 @@
-from typing import Generator, Optional
-import os
-from fastapi import Depends, HTTPException, status
+from typing import Generator, Optional, Dict, Any
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from sqlalchemy.orm import Session
+
 from .models.db import SessionLocal
+from .auth import decode_access_token, create_auth_error, create_forbidden_error
+from .config import config
 
 
-def get_db() -> Generator:
+def get_db() -> Generator[Session, None, None]:
+    """Database dependency with proper typing."""
     db = SessionLocal()
     try:
         yield db
@@ -15,46 +18,35 @@ def get_db() -> Generator:
 
 
 security = HTTPBearer(auto_error=False)
-SECRET_KEY = os.getenv("JWT_SECRET", "devsecret_change_me")
-ALGO = "HS256"
 
 
-def get_current_user_role(
+def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-) -> str:
+) -> Dict[str, Any]:
+    """Get current authenticated user from JWT token."""
     if credentials is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="not authenticated")
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGO])
-        return str(payload.get("role") or "")
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+        raise create_auth_error()
+    
+    payload = decode_access_token(credentials.credentials)
+    return payload
 
 
-def require_role(*roles: str):
-    def _dep(role: str = Depends(get_current_user_role)) -> None:
-        if role not in roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+def get_current_user_role(user: Dict[str, Any] = Depends(get_current_user)) -> str:
+    """Extract user role from authenticated user."""
+    return str(user.get("role", ""))
+
+
+def require_role(*allowed_roles: str):
+    """Create a dependency that requires specific roles."""
+    def _check_role(role: str = Depends(get_current_user_role)) -> None:
+        if role not in allowed_roles:
+            raise create_forbidden_error()
         return None
-    return _dep
+    return _check_role
 
 
-
-# Convenience dependencies
-def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> dict:
-    if credentials is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="not authenticated")
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGO])
-        return payload  # contains at least: sub, role, exp
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
-
-
-def get_current_admin_user(_: None = Depends(require_role("admin"))) -> None:
-    return None
-
-
-def get_current_tutor_user(_: None = Depends(require_role("tutor", "admin"))) -> None:
-    return None
+# Convenience dependencies following industry naming conventions
+get_current_admin_user = Depends(require_role("admin"))
+get_current_tutor_user = Depends(require_role("tutor", "admin"))
+get_current_student_user = Depends(require_role("student", "tutor", "admin"))
 

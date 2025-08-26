@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_db, require_role
 from ..models.entities import User
-from ..schemas.admin import CreateUserIn, UpdateRoleIn, UserOut
-from .auth import hash_password
+from ..schemas.admin import CreateUserIn, UpdateRoleIn, UserOut, ResetPasswordIn
+from ..auth import hash_password
+from ..config import config
 
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_role("admin"))])
@@ -19,46 +20,72 @@ def list_users(db: Session = Depends(get_db)) -> list[UserOut]:
 
 @router.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def create_user(payload: CreateUserIn, db: Session = Depends(get_db)) -> UserOut:
+    """Create a new user (admin only)."""
+    # Check if user already exists
     if db.query(User).filter(User.email == payload.email).first():
-        raise HTTPException(status_code=400, detail="email exists")
-    u = User(email=payload.email, password_hash=hash_password(payload.password), role=payload.role)
-    db.add(u)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=config.ERROR_EMAIL_EXISTS
+        )
+    
+    # Create user
+    user = User(
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        role=payload.role
+    )
+    db.add(user)
     db.commit()
-    db.refresh(u)
-    return u
+    db.refresh(user)
+    return user
 
 
 @router.patch("/users/{user_id}/role", response_model=UserOut)
-def update_role(user_id: int, payload: UpdateRoleIn, db: Session = Depends(get_db)) -> UserOut:
-    u = db.get(User, user_id)
-    if not u:
-        raise HTTPException(status_code=404, detail="user not found")
-    u.role = payload.role
+def update_user_role(user_id: int, payload: UpdateRoleIn, db: Session = Depends(get_db)) -> UserOut:
+    """Update user role (admin only)."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=config.ERROR_NOT_FOUND
+        )
+    
+    user.role = payload.role
     db.commit()
-    db.refresh(u)
-    return u
+    db.refresh(user)
+    return user
 
 
 @router.patch("/users/{user_id}/password")
-def reset_password(user_id: int, payload: dict, db: Session = Depends(get_db)) -> dict:
-    new_password = payload.get("password")
-    if not new_password or len(str(new_password)) < 6:
-        raise HTTPException(status_code=400, detail="password must be at least 6 characters")
-    u = db.get(User, user_id)
-    if not u:
-        raise HTTPException(status_code=404, detail="user not found")
-    u.password_hash = hash_password(str(new_password))
+def reset_user_password(
+    user_id: int,
+    payload: ResetPasswordIn,
+    db: Session = Depends(get_db)
+) -> dict:
+    """Reset user password (admin only)."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=config.ERROR_NOT_FOUND
+        )
+    
+    user.password_hash = hash_password(payload.password)
     db.commit()
-    return {"ok": True}
+    return {"message": "Password reset successfully"}
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db)) -> None:
-    u = db.get(User, user_id)
-    if not u:
-        raise HTTPException(status_code=404, detail="user not found")
-    db.delete(u)
+    """Delete user (admin only)."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=config.ERROR_NOT_FOUND
+        )
+    
+    db.delete(user)
     db.commit()
-    return None
 
 

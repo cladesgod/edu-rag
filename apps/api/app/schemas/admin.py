@@ -24,3 +24,7 @@ class UpdateRoleIn(BaseModel):
     role: Literal["admin", "tutor", "student"]
 
 
+class ResetPasswordIn(BaseModel):
+    password: str = Field(min_length=6, description="New password (minimum 6 characters)")
+
+

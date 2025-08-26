@@ -1,44 +1,74 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from .routers import auth, forms, questions, realtime, video, admin, classrooms, submissions
 from .models.db import engine
 from .models.entities import Base
 
 
-def create_app() -> FastAPI:
-    app = FastAPI(title="edu-rag API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan management following FastAPI best practices."""
+    # Startup: Create database tables
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Shutdown: Cleanup if needed
 
+
+def create_app() -> FastAPI:
+    """Create FastAPI application with proper configuration."""
+    app = FastAPI(
+        title="EduRAG API",
+        version="0.1.0",
+        description="LLM-assisted education platform API",
+        lifespan=lifespan,
+    )
+
+    # CORS middleware - restrictive for production
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # More secure than "*"
         allow_credentials=True,
-        allow_methods=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
     )
 
-    app.include_router(auth.router)
-    app.include_router(forms.router)
-    app.include_router(questions.router)
-    app.include_router(realtime.router)
-    app.include_router(video.router)
-    app.include_router(admin.router)
-    app.include_router(classrooms.router)
-    app.include_router(submissions.router)
+    # Include routers with consistent ordering
+    routers = [
+        auth.router,
+        admin.router,
+        forms.router,
+        questions.router,
+        submissions.router,
+        classrooms.router,
+        video.router,
+        realtime.router,
+    ]
+    
+    for router in routers:
+        app.include_router(router)
 
-    @app.get("/health")
-    def health() -> dict:
-        return {"status": "ok"}
+    # Health check endpoints
+    @app.get("/health", tags=["health"])
+    def health_check() -> dict:
+        """Health check endpoint for monitoring."""
+        return {"status": "healthy", "service": "edurag-api"}
 
-    @app.get("/")
+    @app.get("/", tags=["root"])
     def root() -> dict:
-        return {"service": "edu-rag api"}
+        """Root endpoint with service information."""
+        return {
+            "service": "EduRAG API",
+            "version": "0.1.0",
+            "docs": "/docs",
+            "health": "/health"
+        }
 
     return app
 
 
+# Create the application instance
 app = create_app()
-
-# Create tables at startup (dev convenience)
-Base.metadata.create_all(bind=engine)
 
 
