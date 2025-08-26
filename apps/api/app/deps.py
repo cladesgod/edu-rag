@@ -35,6 +35,7 @@ def require_role(*roles: str):
     def _dep(role: str = Depends(get_current_user_role)) -> None:
         if role not in roles:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="forbidden")
+        return None
     return _dep
 
 
