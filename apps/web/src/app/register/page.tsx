@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { getApiBase } from "@/lib/api"
-import { setToken, decodeToken } from "@/lib/auth"
+import { setToken, getRole } from "@/lib/auth"
 
 export default function RegisterPage() {
   const API = getApiBase()
@@ -22,23 +22,29 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password, role: "student" }),
       })
       if (!res.ok) {
-        const t = await res.text()
-        throw new Error(t || "register failed")
+        let msg = "Registration failed"
+        try {
+          const j = await res.json()
+          msg = (j?.detail as string) || msg
+        } catch {
+          try { msg = await res.text() } catch {}
+        }
+        throw new Error(msg)
       }
       const data = await res.json()
       if (data?.access_token) {
         setToken(data.access_token)
-        const payload = decodeToken(data.access_token)
-        if (payload?.role === "student") {
-          window.location.href = "/ws"
+        const role = getRole()
+        if (role === "student") {
+          window.location.href = "/student/exams"
           return
         }
         window.location.href = "/"
       } else {
-        throw new Error("no token")
+        throw new Error("No token received")
       }
-    } catch (err) {
-      setError("Registration failed")
+    } catch (err: any) {
+      setError(err?.message || "Registration failed")
     } finally {
       setLoading(false)
     }
