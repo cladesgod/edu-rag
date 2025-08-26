@@ -60,3 +60,40 @@ class Video(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+# --- Classrooms ---
+
+class Classroom(Base):
+    __tablename__ = "classrooms"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    enrollments = relationship("ClassroomEnrollment", back_populates="classroom", cascade="all, delete-orphan")
+    assignments = relationship("ClassroomAssignment", back_populates="classroom", cascade="all, delete-orphan")
+
+
+class ClassroomEnrollment(Base):
+    __tablename__ = "classroom_enrollments"
+    __table_args__ = (UniqueConstraint("classroom_id", "user_id", name="uq_classroom_user"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    classroom_id = Column(Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(32), nullable=False, default="student")  # student only for now
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    classroom = relationship("Classroom", back_populates="enrollments")
+
+
+class ClassroomAssignment(Base):
+    __tablename__ = "classroom_assignments"
+    __table_args__ = (UniqueConstraint("classroom_id", "form_id", name="uq_classroom_form"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    classroom_id = Column(Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=False, index=True)
+    form_id = Column(Integer, ForeignKey("forms.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    classroom = relationship("Classroom", back_populates="assignments")

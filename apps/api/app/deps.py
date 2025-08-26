@@ -38,3 +38,22 @@ def require_role(*roles: str):
     return _dep
 
 
+
+# Convenience dependencies
+def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> dict:
+    if credentials is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="not authenticated")
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGO])
+        return payload  # contains at least: sub, role, exp
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+
+
+def get_current_admin_user(_: None = Depends(require_role("admin"))) -> None:
+    return None
+
+
+def get_current_tutor_user(_: None = Depends(require_role("tutor", "admin"))) -> None:
+    return None
+

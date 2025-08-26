@@ -30,7 +30,10 @@ export default function Home() {
               Login
             </Link>
             <Link href="/forms" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
-              Tutor Dashboard
+              Forms
+            </Link>
+            <Link href="/classrooms" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
+              Classrooms
             </Link>
             <Link href="/admin" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
               Admin Panel

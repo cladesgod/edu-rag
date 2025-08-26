@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, forms, questions, realtime, video, admin
+from .routers import auth, forms, questions, realtime, video, admin, classrooms
 from .models.db import engine
 from .models.entities import Base
 
@@ -22,6 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(realtime.router)
     app.include_router(video.router)
     app.include_router(admin.router)
+    app.include_router(classrooms.router)
 
     @app.get("/health")
     def health() -> dict:
