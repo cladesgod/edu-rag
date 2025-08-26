@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_db, get_current_user, get_current_tutor_user
 from ..models.entities import Submission, Answer, Form, Question
-from ..schemas.submissions import StartSubmissionIn, SubmissionOut, UpsertAnswerIn, SubmitIn
+from ..schemas.submissions import StartSubmissionIn, SubmissionOut, UpsertAnswerIn, SubmitIn, SubmissionDetailOut, AnswerOut
 
 
 router = APIRouter(prefix="/submissions", tags=["submissions"])
@@ -56,5 +56,20 @@ def monitor(db: Session = Depends(get_db)):
         {"id": s.id, "form_id": s.form_id, "user_id": s.user_id, "started_at": s.started_at.isoformat()}
         for s in active
     ]
+
+
+@router.get("/mine", response_model=list[SubmissionOut])
+def my_submissions(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    subs = db.query(Submission).filter(Submission.user_id == int(user.get("sub"))).order_by(Submission.id.desc()).all()
+    return subs
+
+
+@router.get("/{submission_id}", response_model=SubmissionDetailOut)
+def get_submission(submission_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    sub = db.query(Submission).filter(Submission.id == submission_id, Submission.user_id == int(user.get("sub"))).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="submission not found")
+    answers = [AnswerOut(question_id=a.question_id, content=a.content) for a in sub.answers]
+    return SubmissionDetailOut(id=sub.id, form_id=sub.form_id, user_id=sub.user_id, answers=answers)
 
 
