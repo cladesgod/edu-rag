@@ -49,7 +49,14 @@ export default function AdminPage() {
       })
       if (!res.ok) {
         let msg = "Failed to create tutor"
-        try { const j = await res.json(); msg = (j?.detail as string) || msg } catch {}
+        try {
+          const j = await res.json() as any
+          if (typeof j?.detail === "string") msg = j.detail
+          else if (Array.isArray(j?.detail)) msg = j.detail.map((d: any) => d?.msg || JSON.stringify(d)).join("; ")
+          else msg = JSON.stringify(j)
+        } catch {
+          try { msg = await res.text() } catch {}
+        }
         throw new Error(msg)
       }
       setEmail("")
@@ -70,7 +77,7 @@ export default function AdminPage() {
         <h2 className="font-semibold">Create Tutor</h2>
         <div className="grid gap-2 sm:grid-cols-3">
           <input className="border rounded px-2 py-1" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <input type="password" className="border rounded px-2 py-1" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input type="password" className="border rounded px-2 py-1" placeholder="Password (min 6 chars)" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} />
           <button className="bg-black text-white px-3 py-1 rounded disabled:opacity-50" disabled={creating} onClick={createTutor}>{creating ? "Creating..." : "Create Tutor"}</button>
         </div>
         {error && <div className="text-red-600 text-sm">{error}</div>}
