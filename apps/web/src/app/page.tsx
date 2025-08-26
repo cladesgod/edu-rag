@@ -1,59 +1,63 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { getApiBase } from '@/lib/api'
 
 export default function Home() {
   const [health, setHealth] = useState<string>('checking...')
-  const [input, setInput] = useState<string>('')
-  const [sse, setSse] = useState<string[]>([])
-  const evtSourceRef = useRef<EventSource | null>(null)
 
   useEffect(() => {
     fetch(`${getApiBase()}/health`)
       .then((r) => r.json())
-      .then((j) => setHealth(JSON.stringify(j)))
+      .then((j) => setHealth(j.status ?? 'ok'))
       .catch(() => setHealth('error'))
-
-    return () => {
-      if (evtSourceRef.current) {
-        evtSourceRef.current.close()
-      }
-    }
   }, [])
 
-  const startStream = () => {
-    if (evtSourceRef.current) evtSourceRef.current.close()
-    const qs = new URLSearchParams({ text: input }).toString()
-    const es = new EventSource(`${getApiBase()}/realtime/hint?${qs}`)
-    es.addEventListener('hint', (e) => setSse((prev) => [...prev, (e as MessageEvent).data]))
-    es.addEventListener('context', (e) => setSse((prev) => [...prev, (e as MessageEvent).data]))
-    es.onerror = () => es.close()
-    evtSourceRef.current = es
-  }
-
   return (
-    <main className="p-6 max-w-2xl mx-auto space-y-4">
-      <h1 className="text-2xl font-bold">edu-rag web</h1>
-      <div className="text-sm">API health: {health}</div>
-      <div className="flex gap-2">
-        <input
-          className="border rounded px-2 py-1 flex-1"
-          placeholder="Type text to get hints"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <button className="bg-black text-white px-3 py-1 rounded" onClick={startStream}>
-          Start SSE
-        </button>
-      </div>
-      <div className="space-y-2">
-        {sse.map((line, i) => (
-          <div key={i} className="text-sm bg-gray-100 rounded p-2">
-            {line}
+    <main className="min-h-screen bg-white">
+      <section className="mx-auto max-w-5xl px-6 py-16">
+        <div className="text-center">
+          <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">API health: {health}</span>
+          <h1 className="mt-6 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+            Real‑time, LLM‑assisted assessments for modern classrooms
+          </h1>
+          <p className="mt-4 text-base leading-7 text-gray-600">
+            Create forms and exams, stream hints as students write, and deliver instant, personalized feedback.
+          </p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link href="/login" className="rounded-md bg-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">
+              Login
+            </Link>
+            <Link href="/forms" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
+              Tutor Dashboard
+            </Link>
+            <Link href="/admin" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
+              Admin Panel
+            </Link>
+            <Link href="/ws" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
+              Student Demo
+            </Link>
           </div>
-        ))}
-      </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-6 pb-20">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-xl border border-gray-200 p-6">
+            <h3 className="text-base font-semibold text-gray-900">Form & Question Builder</h3>
+            <p className="mt-2 text-sm text-gray-600">Create multiple question types and attach rubrics.</p>
+          </div>
+          <div className="rounded-xl border border-gray-200 p-6">
+            <h3 className="text-base font-semibold text-gray-900">Realtime Hints</h3>
+            <p className="mt-2 text-sm text-gray-600">Stream guidance as students write; never reveal answers.</p>
+          </div>
+          <div className="rounded-xl border border-gray-200 p-6">
+            <h3 className="text-base font-semibold text-gray-900">Video‑RAG</h3>
+            <p className="mt-2 text-sm text-gray-600">Point to the exact timestamp in your course videos.</p>
+          </div>
+        </div>
+      </section>
     </main>
   )
 }

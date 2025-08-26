@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from minio import Minio
 from sqlalchemy.orm import Session
 
-from ..deps import get_db
+from ..deps import get_db, require_role
 from ..models.entities import Video
 from ..schemas.video import VideoOut
 from apps.workers.tasks import index_video
@@ -24,7 +24,7 @@ def get_minio_client() -> Minio:
     return Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
 
 
-@router.post("", response_model=VideoOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=VideoOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("admin", "tutor"))])
 async def upload_video(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -47,7 +47,7 @@ async def upload_video(
     return v
 
 
-@router.post("/{video_id}/index")
+@router.post("/{video_id}/index", dependencies=[Depends(require_role("admin", "tutor"))])
 def index(video_id: int, db: Session = Depends(get_db)) -> dict:
     v = db.get(Video, video_id)
     if not v:

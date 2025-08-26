@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from ..deps import get_db
+from ..deps import get_db, require_role
 from ..models.entities import Question, Form
 from ..schemas.questions import QuestionCreate, QuestionOut, QuestionUpdate
 
@@ -11,7 +11,7 @@ from ..schemas.questions import QuestionCreate, QuestionOut, QuestionUpdate
 router = APIRouter(prefix="/questions", tags=["questions"])
 
 
-@router.post("", response_model=QuestionOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=QuestionOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("admin", "tutor"))])
 def create_question(payload: QuestionCreate, db: Session = Depends(get_db)) -> QuestionOut:
     if not db.get(Form, payload.form_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Form not found")
@@ -44,7 +44,7 @@ def list_questions(form_id: int | None = None, db: Session = Depends(get_db)) ->
     return query.order_by(Question.created_at.asc()).all()
 
 
-@router.patch("/{question_id}", response_model=QuestionOut)
+@router.patch("/{question_id}", response_model=QuestionOut, dependencies=[Depends(require_role("admin", "tutor"))])
 def update_question(question_id: int, payload: QuestionUpdate, db: Session = Depends(get_db)) -> QuestionOut:
     q = db.get(Question, question_id)
     if not q:
@@ -56,7 +56,7 @@ def update_question(question_id: int, payload: QuestionUpdate, db: Session = Dep
     return q
 
 
-@router.delete("/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{question_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role("admin", "tutor"))])
 def delete_question(question_id: int, db: Session = Depends(get_db)) -> None:
     q = db.get(Question, question_id)
     if not q:

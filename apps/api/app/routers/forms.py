@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from ..deps import get_db
+from ..deps import get_db, require_role
 from ..models.entities import Form
 from ..schemas.forms import FormCreate, FormOut, FormUpdate
 
@@ -11,7 +11,7 @@ from ..schemas.forms import FormCreate, FormOut, FormUpdate
 router = APIRouter(prefix="/forms", tags=["forms"])
 
 
-@router.post("", response_model=FormOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=FormOut, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role("admin", "tutor"))])
 def create_form(payload: FormCreate, db: Session = Depends(get_db)) -> FormOut:
     form = Form(
         title=payload.title,
@@ -38,7 +38,7 @@ def list_forms(db: Session = Depends(get_db)) -> list[FormOut]:
     return db.query(Form).order_by(Form.created_at.desc()).all()
 
 
-@router.patch("/{form_id}", response_model=FormOut)
+@router.patch("/{form_id}", response_model=FormOut, dependencies=[Depends(require_role("admin", "tutor"))])
 def update_form(form_id: int, payload: FormUpdate, db: Session = Depends(get_db)) -> FormOut:
     form = db.get(Form, form_id)
     if not form:
@@ -50,7 +50,7 @@ def update_form(form_id: int, payload: FormUpdate, db: Session = Depends(get_db)
     return form
 
 
-@router.delete("/{form_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{form_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_role("admin", "tutor"))])
 def delete_form(form_id: int, db: Session = Depends(get_db)) -> None:
     form = db.get(Form, form_id)
     if not form:

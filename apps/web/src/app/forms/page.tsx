@@ -9,6 +9,7 @@ type FormOut = {
 }
 
 import { getApiBase } from "@/lib/api"
+import { getRole, getToken } from "@/lib/auth"
 const API = getApiBase()
 
 export default function FormsPage() {
@@ -24,7 +25,8 @@ export default function FormsPage() {
   const load = async () => {
     try {
       setError(null)
-      const res = await fetch(`${API}/forms`)
+      const token = getToken()
+      const res = await fetch(`${API}/forms`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       const data = await res.json()
       setForms(data)
     } catch {
@@ -33,6 +35,12 @@ export default function FormsPage() {
   }
 
   useEffect(() => {
+    const role = getRole()
+    const token = getToken()
+    if (!token || !(role === "tutor" || role === "admin")) {
+      window.location.href = "/login"
+      return
+    }
     load()
   }, [])
 
@@ -41,9 +49,10 @@ export default function FormsPage() {
     try {
       setLoading(true)
       setError(null)
+      const token = getToken()
       const res = await fetch(`${API}/forms`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ title, description: description || null }),
       })
       if (!res.ok) throw new Error("create failed")
@@ -67,9 +76,10 @@ export default function FormsPage() {
     if (!editingId) return
     try {
       setLoading(true)
+      const token = getToken()
       const res = await fetch(`${API}/forms/${editingId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ title: editTitle, description: editDescription || null }),
       })
       if (!res.ok) throw new Error("update failed")
@@ -85,7 +95,8 @@ export default function FormsPage() {
   const deleteForm = async (id: number) => {
     try {
       setLoading(true)
-      const res = await fetch(`${API}/forms/${id}`, { method: "DELETE" })
+      const token = getToken()
+      const res = await fetch(`${API}/forms/${id}`, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} })
       if (!res.ok) throw new Error("delete failed")
       await load()
     } catch {
