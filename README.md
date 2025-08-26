@@ -33,6 +33,20 @@ Docker Compose stack:
 - MinIO (S3-compatible object storage)
 - Web (Next.js dev server)
 
+### Diagram
+```mermaid
+graph TD
+  A[Web (Next.js)] -->|REST JSON| B[API (FastAPI)]
+  A -->|SSE / WebSocket| B
+  B -->|ORM| C[(Postgres + pgvector)]
+  B -->|Cache / Sessions / Rate limit| D[(Redis)]
+  B -->|Uploads| E[(MinIO S3)]
+  B -->|Enqueue tasks| D
+  F[Workers (Celery)] -->|Grading / Indexing| C
+  F -->|Object storage| E
+  F -->|Broker / Results| D
+```
+
 ## Dev quickstart
 Requirements: Docker + Docker Compose.
 
