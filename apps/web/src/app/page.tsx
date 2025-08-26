@@ -44,6 +44,9 @@ export default function Home() {
             <Link href="/ws" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
               Student Demo
             </Link>
+            <Link href="/student" className="rounded-md border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-50">
+              Student Exam
+            </Link>
           </div>
         </div>
       </section>
