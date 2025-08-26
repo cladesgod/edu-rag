@@ -16,6 +16,7 @@ Public demo URLs (adjust host/IP as needed):
 - Next.js web app (TS + Tailwind) with pages:
   - `/` Landing page with CTAs (Login, Tutor Dashboard, Admin Panel, Student Demo) and API health
   - `/forms` Forms list/create + inline edit/delete (tutor/admin)
+  - `/classrooms` Classroom management (create, enroll students, assign forms) (tutor/admin)
   - `/forms/[id]` Questions list/create (MCQ) + inline edit/delete
   - `/videos` Upload and Index trigger
   - `/ws` WebSocket hint demo
@@ -91,6 +92,12 @@ Notes:
   - `POST /videos/{id}/index`
   - `GET /videos`
 
+- Classrooms (tutor/admin only)
+  - `POST /classrooms` — create classroom
+  - `GET /classrooms` — list classrooms
+  - `POST /classrooms/{id}/enroll` — enroll a student `{ user_id }`
+  - `POST /classrooms/{id}/assign` — assign a form `{ form_id }`
+
 ## Project structure
 ```
 repo/
@@ -156,7 +163,7 @@ curl -sS http://localhost:9000/minio/health/ready
 This repository is prepared for role-based flows. Immediate work items:
 - Add JWT auth (register/login) with role claims: tutor, student (API is in place)
 - Guard API routes; add tutor-only endpoints (content mgmt, grading triggers) (in place for forms/questions/videos)
-- Web: route guards by role on tutor/admin pages
+- Web: route guards by role on tutor/admin pages (in progress)
 - Tutor dashboard: manage forms/questions/videos; view submissions
 - Student exam page: join exam, answer with realtime hints; submit for grading
 
